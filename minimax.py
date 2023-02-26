@@ -1,5 +1,6 @@
 PLAYER = 'X'              # 'X', 'O'
 DIFFICULTY = 'HARD'       # 'EASY', 'MEDIUM', 'HARD'
+MISERE_MODE = False
 
 
 def game_loop():
@@ -44,8 +45,9 @@ def game_loop():
     print_result(board)
     break
 
+
 def print_result(board):
-    winner = verify_winner(board)
+    winner = verify_winner(board, False)
     result = '\n************\n'
     if winner == PLAYER:
       result += 'YOU WIN!'
@@ -93,19 +95,27 @@ def get_action_result(board, row, col, current_player):
   return board
 
 
-def verify_winner(board):
+def verify_winner(board, ignore_misere = True):
+  winner = None
+
   # Check horizontally and vertically:
   for i in range(3):
     if board[i][0] == board[i][1] == board[i][2] and not check_if_is_empty_cell(board, i, 0):
-      return board[i][0]
-    if board[0][i] == board[1][i] == board[2][i] and not check_if_is_empty_cell(board, 0, i):
-      return board[0][i]
+      winner = board[i][0]
+    elif board[0][i] == board[1][i] == board[2][i] and not check_if_is_empty_cell(board, 0, i):
+      winner = board[0][i]
+
   # Check diagonally:
-  if board[0][0] == board[1][1] == board[2][2] and not check_if_is_empty_cell(board, 0, 0):
-    return board[0][0]
-  if board[0][2] == board[1][1] == board[2][0] and not check_if_is_empty_cell(board, 0, 2):
-    return board[0][2]
-  return None
+  if winner == None:
+    if board[0][0] == board[1][1] == board[2][2] and not check_if_is_empty_cell(board, 0, 0):
+      winner = board[0][0]
+    elif board[0][2] == board[1][1] == board[2][0] and not check_if_is_empty_cell(board, 0, 2):
+      winner = board[0][2]
+
+  if MISERE_MODE and winner != None and not ignore_misere:
+    winner = PLAYER if winner == COMPUTER else COMPUTER
+
+  return winner
 
 
 def check_if_is_final_board(board):
@@ -119,10 +129,11 @@ def check_if_is_final_board(board):
 
 
 def calc_cost(board):
-  w = verify_winner(board)
-  if w == None:
+  winner = verify_winner(board)
+  if winner == None:
     return 0
-  return 1 if w == PLAYER else -1
+  result = 1 if winner == PLAYER else -1
+  return result if not MISERE_MODE else result * (-1)
 
 
 def minimax(board, current_player, current_level = 1):
@@ -169,5 +180,5 @@ def get_min_value(actions_and_costs):
 def main():
   game_loop()
 
-if __name__ == "__main__":
-    main()
+if __name__ == '__main__':
+  main()
