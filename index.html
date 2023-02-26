@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+  <html lang="pt-br">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title> Minimax TicTacToe </title>
+    <link rel="stylesheet" href="./pyscript/pyscript.css" />
+    <script defer src="./pyscript/pyscript.js"></script>
+    <style>
+      body {
+        display: flex;
+        justify-content: center;
+      }
+      #content {
+        padding-top: 100px;
+        background-color: #FFFFFF;
+      }
+      h1 {
+        margin-top: 0px;
+        margin-bottom: 40px;
+      }
+      #configs {
+        display: block;
+      }
+      #configs .config-item {
+        margin-bottom: 20px;
+      }
+      #configs .config-item span, #configs .config-item label {
+        margin-right: 10px;
+      }
+      #start-button, #restart-button {
+        margin-top: 20px;
+        cursor: pointer;
+      }
+      #board {
+        display: none;
+        width: 150px;
+        grid-template-rows: 50px 50px 50px;
+        grid-template-columns: 50px 50px 50px;
+        border: solid 1px #000000;
+      }
+      #board .cell {
+        font-size: 16px;
+        border: solid 1px #000000;
+        background-color: #FFFFFF;
+        text-align: center;
+        padding-top: 10px;
+      }
+      #board .cell:hover {
+        cursor: pointer;
+        background-color: #E3E3E3;
+        transition: 300ms;
+      }
+      #result {
+        display: none;
+        margin-top: 40px;
+      }
+      #result p {
+        font-weight: 600;
+        font-size: 18px;
+        color: #000000;
+      }
+    </style>
+  </head>
+
+  <body>
+    <py-config>
+      [[fetch]]
+      files = ["minimax.py"]
+    </py-config>
+
+    <py-script>
+      import minimax
+      import json
+
+      board, current_player = None, None
+
+      def start_game(difficulty, misere_mode):
+        global board
+        global current_player
+
+        minimax.COMPUTER = 'O' if minimax.PLAYER == 'X' else 'X'
+        minimax.DIFFICULTY = difficulty
+        minimax.MISERE_MODE = misere_mode
+
+        board = minimax.create_new_board()
+        current_player = minimax.PLAYER
+
+      def handle_player_action(row, col):
+        global board
+        global current_player
+
+        board = minimax.get_action_result(board, row, col, current_player)
+
+        if minimax.check_if_is_final_board(board):
+          return json.dumps({
+            'board': board,
+            'final': True,
+            'winner': minimax.verify_winner(board, False)
+          })
+
+        current_player = minimax.PLAYER if current_player == minimax.COMPUTER else minimax.COMPUTER
+        c_row, c_col = minimax.minimax(board, current_player)[0]
+        board = minimax.get_action_result(board, c_row, c_col, current_player)
+
+        if minimax.check_if_is_final_board(board):
+          return json.dumps({
+            'board': board,
+            'final': True,
+            'winner': minimax.verify_winner(board, False)
+          })
+
+        current_player = minimax.PLAYER if current_player == minimax.COMPUTER else minimax.COMPUTER
+
+        return json.dumps({
+          'board': board,
+          'final': False,
+          'winner': None
+        })
+    </py-script>
+
+    <script>
+      function startGame() {
+        var selectedDifficulty = document.querySelector('input[name="difficulty"]:checked').value;
+        var misereMode = document.getElementById('misere-selector').checked;
+
+        var startGamePy = pyscript.runtime.globals.get('start_game');
+        startGamePy(selectedDifficulty, misereMode);
+
+        document.getElementById('configs').style.display = 'none';
+        document.getElementById('board').style.display = 'grid';
+      }
+
+      function restart() {
+        document.getElementById('configs').style.display = 'block';
+        document.querySelector('#result p').innerText = '';
+        document.querySelector('#result').style.display = 'none';
+
+        var board = document.getElementById('board');
+        board.style.display = 'none';
+        board.style.pointerEvents = 'auto';
+
+        var cells = document.querySelectorAll('#board .cell');
+        for (var cell of cells) {
+          cell.innerHTML = '';
+          cell.style.pointerEvents = 'auto';
+        }
+      }
+
+      function handlePlayerAction(row, column) {
+        var handlePlayerActionPy = pyscript.runtime.globals.get('handle_player_action');
+        var resultJson = handlePlayerActionPy(row, column);
+        var result = JSON.parse(resultJson);
+        if (result.final) {
+          showResult(result.winner);
+          document.getElementById('board').style.pointerEvents = 'none';
+        }
+        refreshBoard(result.board);
+      }
+
+      function showResult(winner) {
+        var message = 'EMPATE!';
+        if (winner == 'X') message = 'VOCÊ GANHOU!';
+        else if (winner == 'O') message = 'Você perdeu...';
+  
+        document.querySelector('#result p').innerText = message;
+        document.querySelector('#result').style.display = 'block';
+      }
+
+      function refreshBoard(board) {
+        var cells = document.querySelectorAll('#board .cell');
+        for (var cell of cells) {
+          var arrayX = cell.id.charAt(5);
+          var arrayY = cell.id.charAt(6);
+          var cellValue = board[arrayX][arrayY];
+          cell.innerHTML = cellValue;
+          if (cellValue.trim() != '') cell.style.pointerEvents = 'none';
+        }
+      }
+    </script>
+
+    <div id="content">
+      <h1> Minimax TicTacToe </h1>
+  
+      <div id="configs">
+        <div class="config-item">
+          <span> Dificuldade </span>
+          <div>
+            <label>
+              <input type="radio" name="difficulty" value="EASY"> Fácil
+            </label>
+            <label>
+              <input type="radio" name="difficulty" value="MEDIUM"> Médio
+            </label>
+            <label>
+              <input type="radio" name="difficulty" value="HARD" checked> Difícil
+            </label>
+          </div>
+        </div>
+        <div class="config-item">
+          <span>Misère Mode</span>
+          <input type="checkbox" id="misere-selector">
+        </div>
+        <button type="button" id="start-button" onclick="startGame()"> Iniciar </button>
+      </div>
+      <div id="board">
+        <div id="cell-00" class="cell" onclick="handlePlayerAction(0, 0)"></div>
+        <div id="cell-01" class="cell" onclick="handlePlayerAction(0, 1)"></div>
+        <div id="cell-02" class="cell" onclick="handlePlayerAction(0, 2)"></div>
+        <div id="cell-10" class="cell" onclick="handlePlayerAction(1, 0)"></div>
+        <div id="cell-11" class="cell" onclick="handlePlayerAction(1, 1)"></div>
+        <div id="cell-12" class="cell" onclick="handlePlayerAction(1, 2)"></div>
+        <div id="cell-20" class="cell" onclick="handlePlayerAction(2, 0)"></div>
+        <div id="cell-21" class="cell" onclick="handlePlayerAction(2, 1)"></div>
+        <div id="cell-22" class="cell" onclick="handlePlayerAction(2, 2)"></div>
+      </div>
+      <div id="result">
+        <p></p>
+        <button type="button" id="restart-button" onclick="restart()"> Voltar ao início </button>
+      </div>
+    </div>
+  </body>
+</html>
